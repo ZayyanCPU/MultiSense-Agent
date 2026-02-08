@@ -1,0 +1,101 @@
+{
+  "name": "MultiSense Agent - Document Ingestion Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ingest-document",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "ingest-webhook",
+      "name": "Document Upload Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.headers['content-type'] }}",
+              "operation": "contains",
+              "value2": "pdf"
+            }
+          ]
+        }
+      },
+      "id": "check-pdf",
+      "name": "Is PDF?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://multisense-agent:8080/api/v1/upload",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "multipart/form-data"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyContentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file",
+              "parameterType": "formBinaryData",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "upload-to-rag",
+      "name": "Upload to RAG Engine",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [650, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ error: 'Only PDF files are supported' }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "reject-non-pdf",
+      "name": "Reject Non-PDF",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 400]
+    }
+  ],
+  "connections": {
+    "Document Upload Trigger": {
+      "main": [
+        [{ "node": "Is PDF?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Is PDF?": {
+      "main": [
+        [{ "node": "Upload to RAG Engine", "type": "main", "index": 0 }],
+        [{ "node": "Reject Non-PDF", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": [
+    { "name": "rag" },
+    { "name": "document-processing" }
+  ]
+}

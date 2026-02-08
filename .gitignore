@@ -1,0 +1,41 @@
+# Dependencies
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker-compose.override.yml
+
+# Data
+data/uploads/*
+data/chroma/*
+!data/uploads/.gitkeep
+!data/chroma/.gitkeep
+
+# Logs
+logs/
+*.log
+
+# n8n
+n8n_data/

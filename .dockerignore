@@ -1,0 +1,22 @@
+# ─────────────────────────────────────────────
+# .dockerignore - Exclude from Docker build
+# ─────────────────────────────────────────────
+.git
+.github
+.gitignore
+.env
+.env.example
+.vscode
+.idea
+__pycache__
+*.pyc
+*.pyo
+tests/
+n8n_data/
+data/chroma/*
+data/uploads/*
+*.md
+!README.md
+docker-compose.yml
+docker-compose.override.yml
+Makefile

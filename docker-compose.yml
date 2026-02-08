@@ -1,0 +1,93 @@
+# ═══════════════════════════════════════════════════════
+# MultiSense Agent - Docker Compose
+# Full stack: FastAPI + ChromaDB + n8n
+# ═══════════════════════════════════════════════════════
+
+services:
+  # ─── MultiSense Agent Backend ─────────────────────
+  multisense-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: multisense-agent
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+    volumes:
+      - ./data/uploads:/app/data/uploads
+      - ./logs:/app/logs
+    depends_on:
+      chromadb:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - multisense-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8080/health').raise_for_status()"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ─── ChromaDB Vector Database ─────────────────────
+  chromadb:
+    image: chromadb/chroma:0.5.23
+    container_name: multisense-chromadb
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+      - ALLOW_RESET=TRUE
+    restart: unless-stopped
+    networks:
+      - multisense-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ─── n8n Workflow Automation ──────────────────────
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: multisense-n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER:-admin}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD:-changeme}
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-your-encryption-key}
+      - WEBHOOK_URL=http://n8n:5678/
+      - N8N_HOST=0.0.0.0
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - GENERIC_TIMEZONE=UTC
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./n8n/workflows:/home/node/workflows
+    restart: unless-stopped
+    networks:
+      - multisense-network
+
+# ─── Volumes ────────────────────────────────────────
+volumes:
+  chroma_data:
+    driver: local
+  n8n_data:
+    driver: local
+
+# ─── Networks ───────────────────────────────────────
+networks:
+  multisense-network:
+    driver: bridge
+    name: multisense-network
